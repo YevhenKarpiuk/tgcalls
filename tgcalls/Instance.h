@@ -19,6 +19,7 @@ class VideoSinkInterface;
 namespace webrtc {
 class VideoFrame;
 class AudioDeviceModule;
+class AudioFrameProcessor;
 class TaskQueueFactory;
 template <class T>
 class scoped_refptr;
@@ -238,6 +239,7 @@ struct Descriptor {
     std::function<void(float)> remotePrefferedAspectRatioUpdated;
 	std::function<void(const std::vector<uint8_t> &)> signalingDataEmitted;
 	std::function<webrtc::scoped_refptr<webrtc::AudioDeviceModule>(webrtc::TaskQueueFactory*)> createAudioDeviceModule;
+	std::function<std::unique_ptr<webrtc::AudioFrameProcessor>(std::unique_ptr<webrtc::AudioFrameProcessor>)> createAudioFrameProcessor;
     std::function<webrtc::scoped_refptr<WrappedAudioDeviceModule>(webrtc::TaskQueueFactory*)> createWrappedAudioDeviceModule;
     std::string initialInputDeviceId;
     std::string initialOutputDeviceId;

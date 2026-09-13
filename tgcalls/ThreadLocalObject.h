@@ -32,8 +32,18 @@ public:
 	template <typename FunctorT>
 	void perform(FunctorT &&functor) {
 		_thread->PostTask([valueHolder = _valueHolder.get(), f = std::forward<FunctorT>(functor)]() mutable {
-			assert(valueHolder->_value != nullptr);
-			f(valueHolder->_value.get());
+			auto value = valueHolder->_value;
+			if (value) {
+				f(value.get());
+			}
+		});
+	}
+
+	template <typename CompletionT>
+	void reset(CompletionT &&completion) {
+		_thread->PostTask([valueHolder = _valueHolder.get(), completion = std::forward<CompletionT>(completion)]() mutable {
+			valueHolder->_value.reset();
+			completion();
 		});
 	}
 

@@ -938,6 +938,7 @@ public:
     _remotePrefferedAspectRatioUpdated(descriptor.remotePrefferedAspectRatioUpdated),
     _signalingDataEmitted(descriptor.signalingDataEmitted),
     _createAudioDeviceModule(descriptor.createAudioDeviceModule),
+    _createAudioFrameProcessor(descriptor.createAudioFrameProcessor),
     _createWrappedAudioDeviceModule(descriptor.createWrappedAudioDeviceModule),
     _devicesConfig(descriptor.mediaDevicesConfig),
     _statsLogPath(descriptor.config.statsLogPath),
@@ -1142,6 +1143,10 @@ public:
         peerConnectionFactoryDependencies.video_decoder_factory = PlatformInterface::SharedInstance()->makeVideoDecoderFactory();
 
         peerConnectionFactoryDependencies.adm = _audioDeviceModule;
+        if (_createAudioFrameProcessor) {
+            peerConnectionFactoryDependencies.audio_frame_processor = _createAudioFrameProcessor(
+                std::move(peerConnectionFactoryDependencies.audio_frame_processor));
+        }
 
         webrtc::AudioProcessingBuilder builder;
         peerConnectionFactoryDependencies.audio_processing = builder.Create();
@@ -2219,6 +2224,7 @@ private:
     std::function<void(float)> _remotePrefferedAspectRatioUpdated;
     std::function<void(const std::vector<uint8_t> &)> _signalingDataEmitted;
     std::function<webrtc::scoped_refptr<webrtc::AudioDeviceModule>(webrtc::TaskQueueFactory*)> _createAudioDeviceModule;
+    std::function<std::unique_ptr<webrtc::AudioFrameProcessor>(std::unique_ptr<webrtc::AudioFrameProcessor>)> _createAudioFrameProcessor;
     std::function<webrtc::scoped_refptr<WrappedAudioDeviceModule>(webrtc::TaskQueueFactory*)> _createWrappedAudioDeviceModule;
     MediaDevicesConfig _devicesConfig;
     FilePath _statsLogPath;
@@ -2416,10 +2422,12 @@ void InstanceV2Impl::stop(std::function<void(FinalState)> completion) {
     if (_logSink) {
         debugLog = _logSink->result();
     }
-    _internal->perform([completion, debugLog = std::move(debugLog)](InstanceV2ImplInternal *internal) mutable {
-        internal->stop([completion, debugLog = std::move(debugLog)](FinalState finalState) mutable {
+    _internal->perform([this, completion, debugLog = std::move(debugLog)](InstanceV2ImplInternal *internal) mutable {
+        internal->stop([this, completion, debugLog = std::move(debugLog)](FinalState finalState) mutable {
             finalState.debugLog = debugLog;
-            completion(finalState);
+            _internal->reset([completion, finalState = std::move(finalState)]() mutable {
+                completion(finalState);
+            });
         });
     });
 }
